@@ -375,52 +375,21 @@ sub list_tests {
 sub vroot_engine {
   my $self = shift;
   my $tmpdir = $self->{tmpdir};
-
-  my $config_file = "$tmpdir/vroot.conf";
-  my $pid_file = File::Spec->rel2abs("$tmpdir/vroot.pid");
-  my $scoreboard_file = File::Spec->rel2abs("$tmpdir/vroot.scoreboard");
-
-  my $log_file = test_get_logfile();
-
-  my $auth_user_file = File::Spec->rel2abs("$tmpdir/vroot.passwd");
-  my $auth_group_file = File::Spec->rel2abs("$tmpdir/vroot.group");
-
-  my $user = 'proftpd';
-  my $passwd = 'test';
-  my $group = 'ftpd';
-  my $home_dir = File::Spec->rel2abs($tmpdir);
-  my $uid = 500;
-  my $gid = 500;
-
-  # Make sure that, if we're running as root, that the home directory has
-  # permissions/privs set for the account we create
-  if ($< == 0) {
-    unless (chmod(0755, $home_dir)) {
-      die("Can't set perms on $home_dir to 0755: $!");
-    }
-
-    unless (chown($uid, $gid, $home_dir)) {
-      die("Can't set owner of $home_dir to $uid/$gid: $!");
-    }
-  }
-
-  auth_user_write($auth_user_file, $user, $passwd, $uid, $gid, $home_dir,
-    '/bin/bash');
-  auth_group_write($auth_group_file, $group, $gid, $user);
+  my $setup = test_setup($tmpdir, 'vroot');
 
   my $config = {
-    PidFile => $pid_file,
-    ScoreboardFile => $scoreboard_file,
-    SystemLog => $log_file,
+    PidFile => $setup->{pid_file},
+    ScoreboardFile => $setup->{scoreboard_file},
+    SystemLog => $setup->{log_file},
 
-    AuthUserFile => $auth_user_file,
-    AuthGroupFile => $auth_group_file,
+    AuthUserFile => $setup->{auth_user_file},
+    AuthGroupFile => $setup->{auth_group_file},
 
     IfModules => {
       'mod_vroot.c' => {
         VRootEngine => 'on',
-        VRootLog => $log_file,
-        DefaultRoot => $home_dir,
+        VRootLog => $setup->{log_file},
+        DefaultRoot => $setup->{home_dir},
       },
 
       'mod_delay.c' => {
@@ -429,7 +398,8 @@ sub vroot_engine {
     },
   };
 
-  my ($port, $config_user, $config_group) = config_write($config_file, $config);
+  my ($port, $config_user, $config_group) = config_write($setup->{config_file},
+    $config);
 
   # Open pipes, for use between the parent and child processes.  Specifically,
   # the child will indicate when it's done with its test by writing a message
@@ -447,15 +417,11 @@ sub vroot_engine {
   if ($pid) {
     eval {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
-      $client->login($user, $passwd);
+      $client->login($setup->{user}, $setup->{passwd});
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
         test_msg("Expected response code $expected, got $resp_code"));
 
@@ -643,7 +609,6 @@ sub vroot_engine {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -652,7 +617,7 @@ sub vroot_engine {
     $wfh->flush();
 
   } else {
-    eval { server_wait($config_file, $rfh) };
+    eval { server_wait($setup->{config_file}, $rfh) };
     if ($@) {
       warn($@);
       exit 1;
@@ -662,67 +627,29 @@ sub vroot_engine {
   }
 
   # Stop server
-  server_stop($pid_file);
-
+  server_stop($setup->{pid_file});
   $self->assert_child_ok($pid);
 
-  if ($ex) {
-    test_append_logfile($log_file, $ex);
-    unlink($log_file);
-
-    die($ex);
-  }
-
-  unlink($log_file);
+  test_cleanup($setup->{log_file}, $ex);
 }
 
 sub vroot_anon {
   my $self = shift;
   my $tmpdir = $self->{tmpdir};
-
-  my $config_file = "$tmpdir/vroot.conf";
-  my $pid_file = File::Spec->rel2abs("$tmpdir/vroot.pid");
-  my $scoreboard_file = File::Spec->rel2abs("$tmpdir/vroot.scoreboard");
-
-  my $log_file = test_get_logfile();
-
-  my $auth_user_file = File::Spec->rel2abs("$tmpdir/vroot.passwd");
-  my $auth_group_file = File::Spec->rel2abs("$tmpdir/vroot.group");
-
-  my ($user, $group) = config_get_identity();
-  my $passwd = 'test';
-  my $anon_dir = File::Spec->rel2abs($tmpdir);
-  my $uid = $<;
-  my $gid = $(;
-
-  # Make sure that, if we're running as root, that the home directory has
-  # permissions/privs set for the account we create
-  if ($< == 0) {
-    unless (chmod(0755, $anon_dir)) {
-      die("Can't set perms on $anon_dir to 0755: $!");
-    }
-
-    unless (chown($uid, $gid, $anon_dir)) {
-      die("Can't set owner of $anon_dir to $uid/$gid: $!");
-    }
-  }
-
-  auth_user_write($auth_user_file, $user, $passwd, $uid, $gid, '/tmp',
-    '/bin/bash');
-  auth_group_write($auth_group_file, $group, $gid, $user);
+  my $setup = test_setup($tmpdir, 'vroot');
 
   my $config = {
-    PidFile => $pid_file,
-    ScoreboardFile => $scoreboard_file,
-    SystemLog => $log_file,
+    PidFile => $setup->{pid_file},
+    ScoreboardFile => $setup->{scoreboard_file},
+    SystemLog => $setup->{log_file},
 
-    AuthUserFile => $auth_user_file,
-    AuthGroupFile => $auth_group_file,
+    AuthUserFile => $setup->{auth_user_file},
+    AuthGroupFile => $setup->{auth_group_file},
 
     IfModules => {
       'mod_vroot.c' => {
         VRootEngine => 'on',
-        VRootLog => $log_file,
+        VRootLog => $setup->{log_file},
       },
 
       'mod_delay.c' => {
@@ -731,22 +658,23 @@ sub vroot_anon {
     },
   };
 
-  my ($port, $config_user, $config_group) = config_write($config_file, $config);
+  my ($port, $config_user, $config_group) = config_write($setup->{config_file},
+    $config);
 
-  if (open(my $fh, ">> $config_file")) {
+  if (open(my $fh, ">> $setup->{config_file}")) {
     print $fh <<EOC;
-<Anonymous $anon_dir>
-  User $user
-  Group $group
+<Anonymous $tmpdir>
+  User $setup->{user}
+  Group $setup->{group}
 </Anonymous>
 
 EOC
     unless (close($fh)) {
-      die("Can't write $config_file: $!");
+      die("Can't write $setup->{config_file}: $!");
     }
 
   } else {
-    die("Can't open $config_file: $!");
+    die("Can't open $setup->{config_file}: $!");
   }
 
   # Open pipes, for use between the parent and child processes.  Specifically,
@@ -765,12 +693,11 @@ EOC
   if ($pid) {
     eval {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
-      $client->login($user, $passwd);
+      $client->login($setup->{user}, $setup->{passwd});
 
       my ($resp_code, $resp_msg) = $client->pwd();
-      my $expected;
 
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
         test_msg("Expected response code $expected, got $resp_code"));
 
@@ -958,7 +885,6 @@ EOC
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -967,7 +893,7 @@ EOC
     $wfh->flush();
 
   } else {
-    eval { server_wait($config_file, $rfh) };
+    eval { server_wait($setup->{config_file}, $rfh) };
     if ($@) {
       warn($@);
       exit 1;
@@ -977,18 +903,10 @@ EOC
   }
 
   # Stop server
-  server_stop($pid_file);
-
+  server_stop($setup->{pid_file});
   $self->assert_child_ok($pid);
 
-  if ($ex) {
-    test_append_logfile($log_file, $ex);
-    unlink($log_file);
-
-    die($ex);
-  }
-
-  unlink($log_file);
+  test_cleanup($setup->{log_file}, $ex);
 }
 
 sub vroot_anon_limit_write_allow_stor {
@@ -1308,7 +1226,7 @@ sub vroot_symlink {
       }
 
       # Try to download from the symlink
-      my $conn = $client->retr_raw('foo.txt');
+      $conn = $client->retr_raw('foo.txt');
       if ($conn) {
         die("RETR test.txt succeeded unexpectedly");
       }
@@ -1325,7 +1243,6 @@ sub vroot_symlink {
       $self->assert($expected eq $resp_msg,
         test_msg("Expected response message '$expected', got '$resp_msg'"));
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -1490,7 +1407,7 @@ sub vroot_symlink_eloop {
       }
 
       # Try to download from the symlink
-      my $conn = $client->retr_raw('test.txt');
+      $conn = $client->retr_raw('test.txt');
       if ($conn) {
         die("RETR test.txt succeeded unexpectedly");
       }
@@ -1511,7 +1428,6 @@ sub vroot_symlink_eloop {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -1696,7 +1612,7 @@ sub vroot_opt_allow_symlinks_file {
       }
 
       # Try to download from the symlink
-      my $conn = $client->retr_raw('foo.txt');
+      $conn = $client->retr_raw('foo.txt');
       unless ($conn) {
         die("RETR foo.txt failed: " . $client->response_code() . " " .
           $client->response_msg());
@@ -1711,7 +1627,6 @@ sub vroot_opt_allow_symlinks_file {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -1899,7 +1814,7 @@ sub vroot_opt_allow_symlinks_dir_retr {
       }
 
       # Try to download from the symlink
-      my $conn = $client->retr_raw('public/test.txt');
+      $conn = $client->retr_raw('public/test.txt');
       unless ($conn) {
         die("RETR public/test.txt failed: " . $client->response_code() . " " .
           $client->response_msg());
@@ -1914,7 +1829,6 @@ sub vroot_opt_allow_symlinks_dir_retr {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -2102,7 +2016,7 @@ sub vroot_opt_allow_symlinks_dir_stor_no_overwrite {
       }
 
       # Try to upload to the symlink
-      my $conn = $client->stor_raw('public/test.txt');
+      $conn = $client->stor_raw('public/test.txt');
       if ($conn) {
         die("STOR public/test.txt succeeded unexpectedly");
       }
@@ -2120,7 +2034,6 @@ sub vroot_opt_allow_symlinks_dir_stor_no_overwrite {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -2309,13 +2222,13 @@ sub vroot_opt_allow_symlinks_dir_stor {
       }
 
       # Try to upload to the symlink
-      my $conn = $client->stor_raw('public/test.txt');
+      $conn = $client->stor_raw('public/test.txt');
       unless ($conn) {
         die("STOR public/test.txt failed: " . $client->response_code() . " " .
           $client->response_msg());
       }
 
-      my $buf = "Farewell cruel world!";
+      $buf = "Farewell cruel world!";
       $conn->write($buf, length($buf), 25);
       eval { $conn->close() };
 
@@ -2325,7 +2238,6 @@ sub vroot_opt_allow_symlinks_dir_stor {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -2529,7 +2441,7 @@ sub vroot_opt_allow_symlinks_dir_cwd {
           $client->response_msg());
       }
 
-      my $buf;
+      $buf = '';
       $conn->read($buf, 8192, 5);
       eval { $conn->close() };
 
@@ -2598,7 +2510,6 @@ sub vroot_opt_allow_symlinks_dir_cwd {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -2753,7 +2664,8 @@ sub vroot_dir_mkd {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -3038,7 +2950,8 @@ sub vroot_server_root {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -3197,7 +3110,8 @@ sub vroot_server_root_mkd {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -3388,7 +3302,8 @@ sub vroot_alias_file_list {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -3583,7 +3498,8 @@ sub vroot_alias_file_list_multi {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -3733,7 +3649,8 @@ sub vroot_alias_file_retr {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -3880,7 +3797,8 @@ sub vroot_alias_file_stor_no_overwrite {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -4025,7 +3943,8 @@ sub vroot_alias_file_stor {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -4172,7 +4091,8 @@ sub vroot_alias_file_dele {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -4318,7 +4238,8 @@ sub vroot_alias_file_mlsd {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -4458,7 +4379,8 @@ sub vroot_alias_file_mlst {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -4574,19 +4496,15 @@ sub vroot_alias_dup_same_name {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -4612,7 +4530,7 @@ sub vroot_alias_dup_same_name {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -4638,7 +4556,6 @@ sub vroot_alias_dup_same_name {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -4648,7 +4565,8 @@ sub vroot_alias_dup_same_name {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -4765,19 +4683,15 @@ sub vroot_alias_dup_colliding_aliases {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -4803,7 +4717,7 @@ sub vroot_alias_dup_colliding_aliases {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -4830,7 +4744,6 @@ sub vroot_alias_dup_colliding_aliases {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -4840,7 +4753,8 @@ sub vroot_alias_dup_colliding_aliases {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -4956,19 +4870,15 @@ sub vroot_alias_delete_source {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       # Delete the source of the alias, and make sure that neither source
       # nor alias appear in the directory listing.
@@ -4977,11 +4887,11 @@ sub vroot_alias_delete_source {
 
       $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "DELE command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -5007,7 +4917,7 @@ sub vroot_alias_delete_source {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -5032,7 +4942,6 @@ sub vroot_alias_delete_source {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -5042,7 +4951,8 @@ sub vroot_alias_delete_source {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -5148,19 +5058,15 @@ sub vroot_alias_no_source {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -5186,7 +5092,7 @@ sub vroot_alias_no_source {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -5211,7 +5117,6 @@ sub vroot_alias_no_source {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -5221,7 +5126,8 @@ sub vroot_alias_no_source {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -5329,19 +5235,15 @@ sub vroot_alias_dir_list_no_trailing_slash {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -5367,7 +5269,7 @@ sub vroot_alias_dir_list_no_trailing_slash {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -5394,7 +5296,6 @@ sub vroot_alias_dir_list_no_trailing_slash {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -5404,7 +5305,8 @@ sub vroot_alias_dir_list_no_trailing_slash {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -5512,19 +5414,15 @@ sub vroot_alias_dir_list_with_trailing_slash {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -5550,7 +5448,7 @@ sub vroot_alias_dir_list_with_trailing_slash {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -5577,7 +5475,6 @@ sub vroot_alias_dir_list_with_trailing_slash {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -5587,7 +5484,8 @@ sub vroot_alias_dir_list_with_trailing_slash {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -5719,18 +5617,15 @@ sub vroot_alias_dir_list_from_above {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
-      ($resp_code, $resp_msg) = $client->pwd();
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw('bar.d');
       unless ($conn) {
@@ -5756,7 +5651,7 @@ sub vroot_alias_dir_list_from_above {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'a.txt' => 1,
         'b.txt' => 1,
         'c.txt' => 1,
@@ -5778,7 +5673,6 @@ sub vroot_alias_dir_list_from_above {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -5788,7 +5682,8 @@ sub vroot_alias_dir_list_from_above {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -5920,38 +5815,35 @@ sub vroot_alias_dir_cwd_list {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
-      ($resp_code, $resp_msg) = $client->pwd();
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       ($resp_code, $resp_msg) = $client->cwd('bar.d');
 
       $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "CWD command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       ($resp_code, $resp_msg) = $client->pwd();
 
       $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/bar.d\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -5977,7 +5869,7 @@ sub vroot_alias_dir_cwd_list {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'a.txt' => 1,
         'b.txt' => 1,
         'c.txt' => 1,
@@ -5999,7 +5891,6 @@ sub vroot_alias_dir_cwd_list {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -6009,7 +5900,8 @@ sub vroot_alias_dir_cwd_list {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -6117,38 +6009,35 @@ sub vroot_alias_dir_cwd_stor {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
-      ($resp_code, $resp_msg) = $client->pwd();
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       ($resp_code, $resp_msg) = $client->cwd('bar.d');
 
       $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "CWD command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       ($resp_code, $resp_msg) = $client->pwd();
 
       $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/bar.d\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->stor_raw('test.txt');
       unless ($conn) {
@@ -6160,13 +6049,12 @@ sub vroot_alias_dir_cwd_stor {
       $conn->write($buf, length($buf), 5);
       eval { $conn->close() };
 
-      my $resp_code = $client->response_code();
-      my $resp_msg = $client->response_msg();
+      $resp_code = $client->response_code();
+      $resp_msg = $client->response_msg();
       $self->assert_transfer_ok($resp_code, $resp_msg);
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -6176,7 +6064,8 @@ sub vroot_alias_dir_cwd_stor {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -6284,62 +6173,58 @@ sub vroot_alias_dir_cwd_cdup {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
-      ($resp_code, $resp_msg) = $client->pwd();
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       ($resp_code, $resp_msg) = $client->cwd('bar.d');
 
       $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "CWD command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       ($resp_code, $resp_msg) = $client->pwd();
 
       $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/bar.d\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       ($resp_code, $resp_msg) = $client->cdup();
 
       $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "CDUP command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       ($resp_code, $resp_msg) = $client->pwd();
 
       $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -6349,7 +6234,8 @@ sub vroot_alias_dir_cwd_cdup {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -6487,7 +6373,8 @@ sub vroot_alias_dir_mkd {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -6625,7 +6512,8 @@ sub vroot_alias_dir_rmd {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -6758,15 +6646,14 @@ sub vroot_alias_dir_cwd_mlsd {
       $client->login($user, $passwd);
 
       my ($resp_code, $resp_msg) = $client->cwd('bar.d');
-      my $expected;
 
-      $expected = 250;
+      my $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "CWD command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->mlsd_raw();
       unless ($conn) {
@@ -6792,7 +6679,7 @@ sub vroot_alias_dir_cwd_mlsd {
         die("MLSD data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         '.' => 1,
         '..' => 1,
         'a.txt' => 1,
@@ -6816,7 +6703,6 @@ sub vroot_alias_dir_cwd_mlsd {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -6826,7 +6712,8 @@ sub vroot_alias_dir_cwd_mlsd {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -7016,7 +6903,8 @@ sub vroot_alias_dir_mlsd_from_above {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -7150,15 +7038,14 @@ sub vroot_alias_dir_outside_root_cwd_mlsd {
       $client->login($user, $passwd);
 
       my ($resp_code, $resp_msg) = $client->cwd('bar.d');
-      my $expected;
 
-      $expected = 250;
+      my $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "CWD command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->mlsd_raw();
       unless ($conn) {
@@ -7184,7 +7071,7 @@ sub vroot_alias_dir_outside_root_cwd_mlsd {
         die("MLSD data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         '.' => 1,
         '..' => 1,
         'a.txt' => 1,
@@ -7208,7 +7095,6 @@ sub vroot_alias_dir_outside_root_cwd_mlsd {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -7218,7 +7104,8 @@ sub vroot_alias_dir_outside_root_cwd_mlsd {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -7366,15 +7253,14 @@ sub vroot_alias_dir_outside_root_cwd_mlsd_cwd_ls {
       $client->login($user, $passwd);
 
       my ($resp_code, $resp_msg) = $client->cwd('bar.d');
-      my $expected;
 
-      $expected = 250;
+      my $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "CWD command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->mlsd_raw();
       unless ($conn) {
@@ -7400,7 +7286,7 @@ sub vroot_alias_dir_outside_root_cwd_mlsd_cwd_ls {
         die("MLSD data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         '.' => 1,
         '..' => 1,
         'subdir' => 1,
@@ -7427,11 +7313,11 @@ sub vroot_alias_dir_outside_root_cwd_mlsd_cwd_ls {
 
       $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "CWD command successful";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       $conn = $client->list_raw();
       unless ($conn) {
@@ -7479,15 +7365,14 @@ sub vroot_alias_dir_outside_root_cwd_mlsd_cwd_ls {
 
       $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = '"/bar.d/subdir" is the current directory';
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -7497,7 +7382,8 @@ sub vroot_alias_dir_outside_root_cwd_mlsd_cwd_ls {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -7629,7 +7515,8 @@ sub vroot_alias_dir_mlst {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -7761,19 +7648,15 @@ sub vroot_alias_symlink_list {
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -7799,7 +7682,7 @@ sub vroot_alias_symlink_list {
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -7827,7 +7710,6 @@ sub vroot_alias_symlink_list {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -7837,7 +7719,8 @@ sub vroot_alias_symlink_list {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -8000,7 +7883,8 @@ sub vroot_alias_symlink_retr {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -8163,7 +8047,8 @@ sub vroot_alias_symlink_stor_no_overwrite {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -8324,7 +8209,8 @@ sub vroot_alias_symlink_stor {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -8486,7 +8372,8 @@ sub vroot_alias_symlink_mlsd {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -8642,7 +8529,8 @@ sub vroot_alias_symlink_mlst {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -8775,19 +8663,15 @@ EOC
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      ($resp_code, $resp_msg) = $client->pwd();
-
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -8813,7 +8697,7 @@ EOC
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -8840,7 +8724,6 @@ EOC
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -8850,7 +8733,8 @@ EOC
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -8983,18 +8867,15 @@ EOC
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
-      ($resp_code, $resp_msg) = $client->pwd();
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -9020,7 +8901,7 @@ EOC
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -9047,7 +8928,6 @@ EOC
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -9057,7 +8937,8 @@ EOC
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -9187,18 +9068,15 @@ EOC
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
-      ($resp_code, $resp_msg) = $client->pwd();
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -9228,7 +9106,7 @@ EOC
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -9255,11 +9133,11 @@ EOC
 
       $expected = 250;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = 'CWD command successful';
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       $conn = $client->list_raw('-al');
       unless ($conn) {
@@ -9324,7 +9202,6 @@ EOC
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -9334,7 +9211,8 @@ EOC
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -9471,18 +9349,15 @@ EOC
       my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
       $client->login($user, $passwd);
 
-      my ($resp_code, $resp_msg);
-      ($resp_code, $resp_msg) = $client->pwd();
+      my ($resp_code, $resp_msg) = $client->pwd();
 
-      my $expected;
-
-      $expected = 257;
+      my $expected = 257;
       $self->assert($expected == $resp_code,
-        test_msg("Expected $expected, got $resp_code"));
+        test_msg("Expected response code $expected, got $resp_code"));
 
       $expected = "\"/\" is the current directory";
       $self->assert($expected eq $resp_msg,
-        test_msg("Expected '$expected', got '$resp_msg'"));
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
 
       my $conn = $client->list_raw();
       unless ($conn) {
@@ -9508,7 +9383,7 @@ EOC
         die("LIST data unexpectedly empty");
       }
 
-      my $expected = {
+      $expected = {
         'vroot.conf' => 1,
         'vroot.group' => 1,
         'vroot.passwd' => 1,
@@ -9535,7 +9410,6 @@ EOC
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -9545,7 +9419,8 @@ EOC
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -9646,7 +9521,7 @@ sub vroot_showsymlinks_on {
     die("Can't open $inside_file: $!");
   }
 
-  my $cwd = getcwd();
+  $cwd = getcwd();
 
   unless (chdir($home_dir)) {
     die("Can't chdir to $home_dir: $!");
@@ -9751,7 +9626,7 @@ sub vroot_showsymlinks_on {
       }
 
       # Try to download from the symlink
-      my $conn = $client->retr_raw('bar.txt');
+      $conn = $client->retr_raw('bar.txt');
       unless ($conn) {
         die("RETR bar.txt failed: " . $client->response_code() . " " .
           $client->response_msg());
@@ -9766,7 +9641,6 @@ sub vroot_showsymlinks_on {
 
       $client->quit();
     };
-
     if ($@) {
       $ex = $@;
     }
@@ -9908,7 +9782,8 @@ sub vroot_hiddenstores_on_double_dot {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -11427,7 +11302,8 @@ sub vroot_alias_var_u_file {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -11618,7 +11494,8 @@ sub vroot_alias_var_u_dir {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -11843,7 +11720,8 @@ sub vroot_alias_var_u_dir_with_stor_mff {
 
   } else {
     eval { server_wait($config_file, $rfh, 45) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -12049,7 +11927,8 @@ sub vroot_alias_var_u_symlink_dir {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -12244,7 +12123,8 @@ sub vroot_alias_bad_src_dst_check_bug4 {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -12439,7 +12319,8 @@ sub vroot_alias_bad_alias_dirscan_bug5 {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -12623,7 +12504,8 @@ sub vroot_alias_enametoolong_bug59 {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 

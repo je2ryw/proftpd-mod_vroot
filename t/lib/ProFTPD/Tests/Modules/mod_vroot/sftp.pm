@@ -152,8 +152,8 @@ sub set_up {
   # Make sure that mod_sftp does not complain about permissions on the hostkey
   # files.
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   unless (chmod(0400, $rsa_host_key, $dsa_host_key)) {
     die("Can't set perms on $rsa_host_key, $dsa_host_key: $!");
@@ -208,8 +208,8 @@ sub vroot_alias_file_sftp_read {
 
   my $dst_file = '~/bar.txt';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -319,7 +319,8 @@ sub vroot_alias_file_sftp_read {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -386,8 +387,8 @@ sub vroot_alias_file_sftp_write_no_overwrite {
 
   my $dst_file = '~/bar.txt';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -486,7 +487,8 @@ sub vroot_alias_file_sftp_write_no_overwrite {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -553,8 +555,8 @@ sub vroot_alias_file_sftp_write {
 
   my $dst_file = '~/bar.txt';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -658,7 +660,8 @@ sub vroot_alias_file_sftp_write {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -725,8 +728,8 @@ sub vroot_alias_file_sftp_stat {
 
   my $dst_file = '~/bar.txt';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -835,7 +838,8 @@ sub vroot_alias_file_sftp_stat {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -902,8 +906,8 @@ sub vroot_alias_file_sftp_lstat {
 
   my $dst_file = '~/bar.txt';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -1012,7 +1016,8 @@ sub vroot_alias_file_sftp_lstat {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -1079,8 +1084,8 @@ sub vroot_alias_file_sftp_realpath {
 
   my $dst_file = '~/bar.txt';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -1180,7 +1185,8 @@ sub vroot_alias_file_sftp_realpath {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -1247,8 +1253,8 @@ sub vroot_alias_file_sftp_remove {
 
   my $dst_file = '~/bar.txt';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -1347,7 +1353,8 @@ sub vroot_alias_file_sftp_remove {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -1430,8 +1437,8 @@ sub vroot_alias_dir_sftp_readdir {
     die("Can't open $test_file3: $!");
   }
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -1572,7 +1579,8 @@ sub vroot_alias_dir_sftp_readdir {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -1631,8 +1639,8 @@ sub vroot_alias_dir_sftp_rmdir {
 
   my $dst_dir = '~/bar.d';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -1731,7 +1739,8 @@ sub vroot_alias_dir_sftp_rmdir {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -1813,8 +1822,8 @@ sub vroot_alias_symlink_sftp_stat {
   my $src_symlink = File::Spec->rel2abs("$tmpdir/foo.lnk");
   my $dst_file = '~/bar.lnk';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -1924,7 +1933,8 @@ sub vroot_alias_symlink_sftp_stat {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -2006,8 +2016,8 @@ sub vroot_alias_symlink_sftp_lstat {
   my $src_symlink = File::Spec->rel2abs("$tmpdir/foo.lnk");
   my $dst_file = '~/bar.lnk';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -2117,7 +2127,8 @@ sub vroot_alias_symlink_sftp_lstat {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -2199,8 +2210,8 @@ sub vroot_alias_symlink_sftp_realpath {
   my $src_symlink = File::Spec->rel2abs("$tmpdir/foo.lnk");
   my $dst_file = '~/bar.lnk';
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -2299,7 +2310,8 @@ sub vroot_alias_symlink_sftp_realpath {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -2368,8 +2380,8 @@ sub vroot_alias_file_scp_download {
 
   my $test_file = File::Spec->rel2abs("tmpdir/test.txt");
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -2461,7 +2473,8 @@ sub vroot_alias_file_scp_download {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -2530,8 +2543,8 @@ sub vroot_alias_file_scp_upload {
 
   my $test_file = File::Spec->rel2abs("tmpdir/test.txt");
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $config = {
     PidFile => $pid_file,
@@ -2620,7 +2633,8 @@ sub vroot_alias_file_scp_upload {
 
   } else {
     eval { server_wait($config_file, $rfh) };
-    if ($@) { warn($@);
+    if ($@) {
+      warn($@);
       exit 1;
     }
 
@@ -2644,8 +2658,8 @@ sub vroot_sftp_log_extlog_retr {
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'vroot');
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $test_file = File::Spec->rel2abs("$tmpdir/test.txt");
   if (open(my $fh, "> $test_file")) {
@@ -2807,8 +2821,8 @@ sub vroot_sftp_log_xferlog_retr {
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'vroot');
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $test_file = File::Spec->rel2abs("$tmpdir/test.txt");
   if (open(my $fh, "> $test_file")) {
@@ -2998,8 +3012,8 @@ sub vroot_sftp_log_extlog_stor {
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'vroot');
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $test_file = File::Spec->rel2abs("$tmpdir/test.txt");
   my $ext_log = File::Spec->rel2abs("$tmpdir/ext.log");
@@ -3145,8 +3159,8 @@ sub vroot_sftp_log_xferlog_stor {
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'vroot');
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $test_file = File::Spec->rel2abs("$tmpdir/test.txt");
   my $xfer_log = File::Spec->rel2abs("$tmpdir/xfer.log");
@@ -3320,8 +3334,8 @@ sub vroot_scp_log_extlog_retr {
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'vroot');
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $test_file = File::Spec->rel2abs("$tmpdir/test.txt");
   if (open(my $fh, "> $test_file")) {
@@ -3464,8 +3478,8 @@ sub vroot_scp_log_xferlog_retr {
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'vroot');
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $test_file = File::Spec->rel2abs("$tmpdir/test.txt");
   if (open(my $fh, "> $test_file")) {
@@ -3636,8 +3650,8 @@ sub vroot_scp_log_extlog_stor {
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'vroot');
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $test_file = File::Spec->rel2abs("$tmpdir/test.txt");
   my $ext_log = File::Spec->rel2abs("$tmpdir/ext.log");
@@ -3770,8 +3784,8 @@ sub vroot_scp_log_xferlog_stor {
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'vroot');
 
-  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_rsa_key");
-  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/t/etc/modules/mod_sftp/ssh_host_dsa_key");
+  my $rsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_rsa_key");
+  my $dsa_host_key = File::Spec->rel2abs("$ENV{PROFTPD_TEST_DIR}/tests/t/etc/modules/mod_sftp/ssh_host_dsa_key");
 
   my $test_file = File::Spec->rel2abs("$tmpdir/test.txt");
   my $xfer_log = File::Spec->rel2abs("$tmpdir/xfer.log");
